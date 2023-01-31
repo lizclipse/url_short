@@ -17,10 +17,13 @@ edition = "2021"
 [dependencies]
 aws-config = "0.53.0"
 aws-sdk-dynamodb = "0.23.0"
+cookie = { version = "0.17.0", features = ["percent-encode"] }
+http = "0.2.8"
 lambda_http = { version = "0.7", default-features = false, features = [
     "apigw_http",
 ] }
 lambda_runtime = "0.7"
+serde = { version = "1.0.152", features = ["derive"] }
 tokio = { version = "1", features = ["macros"] }
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", default-features = false, features = [
