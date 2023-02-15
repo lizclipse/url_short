@@ -1,16 +1,14 @@
 {error}
 
-<table>
-  <thead>
-    <tr>
-      <th>Key</th>
-      <th>URL</th>
-      <th></th>
-    </tr>
-  </thead>
-  <tbody>
-    {rows}
-  </tbody>
-</table>
+<form class="insert" method="post">
+  <input type="text" name="key" />
+  <input type="text" name="url" />
+  <input type="hidden" name="type" value="Upsert" />
+  <button type="submit" name="update" value="Update">Create</button>
+</form>
+
+<div class="rows">
+  {rows}
+</div>
 
 {nav}

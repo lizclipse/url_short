@@ -8,6 +8,7 @@ use crate::{Handler, Output};
 const COOKIE_NAME: &str = "admin_secret";
 const KEY: &str = "key";
 const URL: &str = "url";
+const CURSOR: &str = "cursor";
 
 impl<'a> Handler<'a> {
     pub async fn admin(mut self) -> Output {
@@ -65,13 +66,30 @@ impl<'a> Handler<'a> {
     where
         E: AsRef<str>,
     {
-        let rows = self
-            .client
-            .scan()
-            .table_name(&self.config.table_name)
-            .send()
-            .await
-            .map(|resp| resp.items.unwrap_or_default())
+        let query = self.event.query_string_parameters();
+        let cursor = query.first(CURSOR).unwrap_or_default();
+
+        let mut req = self.client.scan().table_name(&self.config.table_name);
+
+        if !cursor.is_empty() {
+            req = req.exclusive_start_key(KEY, AttributeValue::S(cursor.to_owned()));
+        }
+
+        let res = match req.send().await {
+            Ok(res) => res,
+            Err(err) => return self.render(500, self.render_error(err.to_string())),
+        };
+        let cursor = res.last_evaluated_key().and_then(|key| {
+            key.get(KEY)
+                .and_then(|key| match key {
+                    AttributeValue::S(key) => Some(key),
+                    _ => None,
+                })
+                .map(|key| key.to_owned())
+        });
+
+        let rows = res
+            .items
             .unwrap_or_default()
             .into_iter()
             .flat_map(|mut item| {
@@ -92,15 +110,12 @@ impl<'a> Handler<'a> {
                 if key.is_empty() || url.is_empty() {
                     None
                 } else {
-                    Some((key, url))
+                    Some(format!(
+                        include_str!("./templates/admin_row.html"),
+                        key = key,
+                        url = url
+                    ))
                 }
-            })
-            .map(|(key, url)| {
-                format!(
-                    include_str!("./templates/admin_row.html"),
-                    key = key,
-                    url = url
-                )
             })
             .collect::<Vec<_>>()
             .join("");
@@ -111,7 +126,18 @@ impl<'a> Handler<'a> {
                 include_str!("./templates/admin.html"),
                 error = err.map(|e| self.render_error(e)).unwrap_or_default(),
                 rows = rows,
-                nav = "",
+                nav = format!(
+                    include_str!("./templates/nav.html"),
+                    key = self.config.admin_key,
+                    next = match cursor {
+                        Some(cursor) => format!(
+                            include_str!("./templates/nav_next.html"),
+                            key = self.config.admin_key,
+                            cursor = cursor
+                        ),
+                        None => "".to_owned(),
+                    }
+                ),
             ),
         )
     }

@@ -1,1 +1,7 @@
 /target
+
+.terraform/
+*.tfbackend
+*.tfvars
+*.tfvars.json
+!infra/template.tfvars
