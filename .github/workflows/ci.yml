@@ -1,0 +1,102 @@
+name: "Build & Deploy"
+# Derived from https://cloudscalr.com/deploy-to-aws-with-terraform-within-a-github-action/
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Git checkout
+        uses: actions/checkout@v3
+
+      - name: Cache
+        uses: actions/cache@v2
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Setup Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Install Zig
+        uses: goto-bus-stop/setup-zig@v1
+        with:
+          version: 0.10.1
+
+      - name: Install cargo-lambda
+        uses: zerj9/setup-cargo-lambda@v0.1.0
+
+      - name: Build lambda
+        run: ./build.sh
+
+      # - name: Configure AWS credentials from AWS account
+      #   uses: aws-actions/configure-aws-credentials@v1
+      #   with:
+      #     role-to-assume: ${{ secrets.AWS_ROLE }}
+      #     aws-region: ${{ secrets.AWS_REGION }}
+      #     role-session-name: GitHub-OIDC-TERRAFORM
+
+      # - name: Setup Terraform
+      #   uses: hashicorp/setup-terraform@v2
+
+      # - name: Terraform fmt
+      #   id: fmt
+      #   run: terraform fmt -check
+      #   continue-on-error: true
+      #   working-directory: ./infra
+
+      # - name: Terraform Init
+      #   id: init
+      #   env:
+      #     AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+      #     AWS_BUCKET_KEY_NAME: ${{ secrets.AWS_BUCKET_KEY_NAME }}
+      #     AWS_TABLE_NAME: ${{ secrets.AWS_TABLE_NAME }}
+      #   run: terraform init -backend-config="bucket=${AWS_BUCKET_NAME}" -backend-config="key=${AWS_BUCKET_KEY_NAME}" -backend-config="region=${AWS_REGION}" -backend-config="dynamodb_table=${AWS_TABLE_NAME}"
+      #   working-directory: ./infra
+
+      # - name: Terraform Validate
+      #   id: validate
+      #   run: terraform validate -no-color
+      #   working-directory: ./infra
+
+      # - name: Terraform Plan
+      #   id: plan
+      #   env:
+      #     TF_LOG: INFO
+      #     AWS_REGION: ${{ secrets.AWS_REGION }}
+      #     TF_VAR_region: ${{ secrets.AWS_REGION }}
+      #     TF_VAR_domain: ${{ secrets.DOMAIN }}
+      #     TF_VAR_default_redirect: ${{ secrets.DEFAULT_REDIRECT }}
+      #     TF_VAR_admin_key: ${{ secrets.ADMIN_KEY }}
+      #     TF_VAR_admin_secret: ${{ secrets.ADMIN_SECRET }}
+      #   run: terraform plan -no-color
+      #   working-directory: ./infra
+      #   if: github.event_name == 'pull_request'
+
+      # - name: Terraform Apply
+      #   env:
+      #     TF_LOG: INFO
+      #     AWS_REGION: ${{ secrets.AWS_REGION }}
+      #     TF_VAR_region: ${{ secrets.AWS_REGION }}
+      #     TF_VAR_domain: ${{ secrets.DOMAIN }}
+      #     TF_VAR_default_redirect: ${{ secrets.DEFAULT_REDIRECT }}
+      #     TF_VAR_admin_key: ${{ secrets.ADMIN_KEY }}
+      #     TF_VAR_admin_secret: ${{ secrets.ADMIN_SECRET }}
+      #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+      #   run: terraform apply -auto-approve -input=false
+      #   working-directory: ./infra
