@@ -60,7 +60,7 @@ impl<'a> Handler<'a> {
                 url.as_s()
                     .map_err(|_| (500, "The URL for this redirect is invalid"))
             })
-            .map(|url| redirect_to(url))
+            .map(redirect_to)
             .unwrap_or_else(|(status, err)| self.render(status, err))
     }
 

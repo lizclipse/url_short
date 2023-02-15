@@ -18,7 +18,7 @@ impl<'a> Handler<'a> {
         };
 
         let err = if let Some(AdminRequest::Login(req)) = &request {
-            self.handle_login(&req)
+            self.handle_login(req)
         } else {
             self.authenticate()
         };

@@ -33,6 +33,18 @@ jobs:
           toolchain: stable
           override: true
 
+      - name: Format
+        uses: actions-rs/cargo@v1
+        with:
+          command: fmt
+          args: --check
+
+      - name: Clippy
+        uses: actions-rs/cargo@v1
+        with:
+          command: clippy
+          args: -- -D warnings
+
       - name: Install Zig
         uses: goto-bus-stop/setup-zig@v1
         with:
@@ -44,59 +56,59 @@ jobs:
       - name: Build lambda
         run: ./build.sh
 
-      # - name: Configure AWS credentials from AWS account
-      #   uses: aws-actions/configure-aws-credentials@v1
-      #   with:
-      #     role-to-assume: ${{ secrets.AWS_ROLE }}
-      #     aws-region: ${{ secrets.AWS_REGION }}
-      #     role-session-name: GitHub-OIDC-TERRAFORM
+      - name: Configure AWS credentials from AWS account
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE }}
+          aws-region: ${{ secrets.AWS_REGION }}
+          role-session-name: GitHub-OIDC-TERRAFORM
 
-      # - name: Setup Terraform
-      #   uses: hashicorp/setup-terraform@v2
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
 
-      # - name: Terraform fmt
-      #   id: fmt
-      #   run: terraform fmt -check
-      #   continue-on-error: true
-      #   working-directory: ./infra
+      - name: Terraform fmt
+        id: fmt
+        run: terraform fmt -check
+        continue-on-error: true
+        working-directory: ./infra
 
-      # - name: Terraform Init
-      #   id: init
-      #   env:
-      #     AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
-      #     AWS_BUCKET_KEY_NAME: ${{ secrets.AWS_BUCKET_KEY_NAME }}
-      #     AWS_TABLE_NAME: ${{ secrets.AWS_TABLE_NAME }}
-      #   run: terraform init -backend-config="bucket=${AWS_BUCKET_NAME}" -backend-config="key=${AWS_BUCKET_KEY_NAME}" -backend-config="region=${AWS_REGION}" -backend-config="dynamodb_table=${AWS_TABLE_NAME}"
-      #   working-directory: ./infra
+      - name: Terraform Init
+        id: init
+        env:
+          AWS_BUCKET_NAME: ${{ secrets.AWS_BUCKET_NAME }}
+          AWS_BUCKET_KEY_NAME: ${{ secrets.AWS_BUCKET_KEY_NAME }}
+          AWS_TABLE_NAME: ${{ secrets.AWS_TABLE_NAME }}
+        run: terraform init -backend-config="bucket=${AWS_BUCKET_NAME}" -backend-config="key=${AWS_BUCKET_KEY_NAME}" -backend-config="region=${AWS_REGION}" -backend-config="dynamodb_table=${AWS_TABLE_NAME}"
+        working-directory: ./infra
 
-      # - name: Terraform Validate
-      #   id: validate
-      #   run: terraform validate -no-color
-      #   working-directory: ./infra
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate -no-color
+        working-directory: ./infra
 
-      # - name: Terraform Plan
-      #   id: plan
-      #   env:
-      #     TF_LOG: INFO
-      #     AWS_REGION: ${{ secrets.AWS_REGION }}
-      #     TF_VAR_region: ${{ secrets.AWS_REGION }}
-      #     TF_VAR_domain: ${{ secrets.DOMAIN }}
-      #     TF_VAR_default_redirect: ${{ secrets.DEFAULT_REDIRECT }}
-      #     TF_VAR_admin_key: ${{ secrets.ADMIN_KEY }}
-      #     TF_VAR_admin_secret: ${{ secrets.ADMIN_SECRET }}
-      #   run: terraform plan -no-color
-      #   working-directory: ./infra
-      #   if: github.event_name == 'pull_request'
+      - name: Terraform Plan
+        id: plan
+        env:
+          TF_LOG: INFO
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_domain: ${{ secrets.DOMAIN }}
+          TF_VAR_default_redirect: ${{ secrets.DEFAULT_REDIRECT }}
+          TF_VAR_admin_key: ${{ secrets.ADMIN_KEY }}
+          TF_VAR_admin_secret: ${{ secrets.ADMIN_SECRET }}
+        run: terraform plan -no-color
+        working-directory: ./infra
+        if: github.event_name == 'pull_request'
 
-      # - name: Terraform Apply
-      #   env:
-      #     TF_LOG: INFO
-      #     AWS_REGION: ${{ secrets.AWS_REGION }}
-      #     TF_VAR_region: ${{ secrets.AWS_REGION }}
-      #     TF_VAR_domain: ${{ secrets.DOMAIN }}
-      #     TF_VAR_default_redirect: ${{ secrets.DEFAULT_REDIRECT }}
-      #     TF_VAR_admin_key: ${{ secrets.ADMIN_KEY }}
-      #     TF_VAR_admin_secret: ${{ secrets.ADMIN_SECRET }}
-      #   if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-      #   run: terraform apply -auto-approve -input=false
-      #   working-directory: ./infra
+      - name: Terraform Apply
+        env:
+          TF_LOG: INFO
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          TF_VAR_region: ${{ secrets.AWS_REGION }}
+          TF_VAR_domain: ${{ secrets.DOMAIN }}
+          TF_VAR_default_redirect: ${{ secrets.DEFAULT_REDIRECT }}
+          TF_VAR_admin_key: ${{ secrets.ADMIN_KEY }}
+          TF_VAR_admin_secret: ${{ secrets.ADMIN_SECRET }}
+        if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+        run: terraform apply -auto-approve -input=false
+        working-directory: ./infra
