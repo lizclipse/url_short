@@ -45,6 +45,7 @@ module "lambda_function" {
   description   = "Core url_short function"
   runtime       = "provided.al2"
   handler       = "main"
+  memory_size   = 256
 
   publish                = true
   create_package         = false
