@@ -86,6 +86,10 @@ impl<'a> Handler<'a> {
         Ok(resp)
     }
 
+    fn render_error(&self, err: impl AsRef<str>) -> String {
+        format!(include_str!("./templates/error.html"), error = err.as_ref())
+    }
+
     fn add_cookie(&mut self, cookie: Cookie) {
         self.cookies.push(cookie.encoded().to_string());
     }

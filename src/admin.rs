@@ -1,5 +1,5 @@
 use aws_sdk_dynamodb::model::AttributeValue;
-use cookie::Cookie;
+use cookie::{Cookie, SameSite};
 use lambda_http::{http::Method, RequestExt};
 use serde::{Deserialize, Serialize};
 
@@ -159,6 +159,7 @@ impl<'a> Handler<'a> {
                     .path("/")
                     .secure(true)
                     .http_only(true)
+                    .same_site(SameSite::Strict)
                     .finish(),
             );
             None
@@ -205,10 +206,6 @@ impl<'a> Handler<'a> {
                 }
             ),
         )
-    }
-
-    fn render_error(&self, err: impl AsRef<str>) -> String {
-        format!(include_str!("./templates/error.html"), error = err.as_ref())
     }
 }
 
