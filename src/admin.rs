@@ -45,7 +45,7 @@ impl<'a> Handler<'a> {
             .send()
             .await
             .map(|_| None)
-            .unwrap_or_else(|err| Some(err.to_string()));
+            .unwrap_or_else(|err| Some(format!("{:#?}", err)));
 
         self.page_admin(err).await
     }
@@ -59,7 +59,7 @@ impl<'a> Handler<'a> {
             .send()
             .await
             .map(|_| None)
-            .unwrap_or_else(|err| Some(err.to_string()));
+            .unwrap_or_else(|err| Some(format!("{:#?}", err)));
 
         self.page_admin(err).await
     }
@@ -79,25 +79,7 @@ impl<'a> Handler<'a> {
 
         let res = match req.send().await {
             Ok(res) => res,
-            Err(err) => {
-                return self.render(
-                    500,
-                    self.render_error(match err {
-                        aws_sdk_dynamodb::types::SdkError::ServiceError(err) => {
-                            match &err.err().kind {
-                                aws_sdk_dynamodb::error::ScanErrorKind::Unhandled(unhandled) => {
-                                    unhandled
-                                        .source()
-                                        .map(|err| err.to_string())
-                                        .unwrap_or_else(|| err.err().to_string())
-                                }
-                                _ => err.err().to_string(),
-                            }
-                        }
-                        err => err.to_string(),
-                    }),
-                )
-            }
+            Err(err) => return self.render(500, self.render_error(format!("{:#?}", err))),
         };
         let cursor = res.last_evaluated_key().and_then(|key| {
             key.get(KEY)
