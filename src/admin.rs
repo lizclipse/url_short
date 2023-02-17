@@ -1,5 +1,3 @@
-use std::error::Error;
-
 use aws_sdk_dynamodb::model::AttributeValue;
 use cookie::{Cookie, SameSite};
 use lambda_http::{http::Method, RequestExt};
