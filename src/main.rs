@@ -49,16 +49,15 @@ impl<'a> Handler<'a> {
             .projection_expression("url")
             .send()
             .await
-            .map_err(Box::new)?
-            .item()
-            .ok_or((404, "No redirect was found"))
-            .and_then(|item| {
-                item.get("url")
-                    .ok_or((500, "The URL for this redirect does not exist"))
+            .map_err(|err| (500, err.to_string()))
+            .and_then(|res| res.item.ok_or((404, "No redirect was found".to_owned())))
+            .and_then(|mut item| {
+                item.remove("url")
+                    .ok_or((500, "The URL for this redirect does not exist".to_owned()))
             })
-            .and_then(|url| {
-                url.as_s()
-                    .map_err(|_| (500, "The URL for this redirect is invalid"))
+            .and_then(|url| match url {
+                AttributeValue::S(url) => Ok(url),
+                _ => Err((500, "The URL for this redirect is invalid".to_owned())),
             })
             .map(redirect_to)
             .unwrap_or_else(|(status, err)| self.render(status, err))

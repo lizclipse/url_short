@@ -1,3 +1,5 @@
+use std::error::Error;
+
 use aws_sdk_dynamodb::model::AttributeValue;
 use cookie::{Cookie, SameSite};
 use lambda_http::{http::Method, RequestExt};
@@ -82,7 +84,15 @@ impl<'a> Handler<'a> {
                     500,
                     self.render_error(match err {
                         aws_sdk_dynamodb::types::SdkError::ServiceError(err) => {
-                            err.err().to_string()
+                            match &err.err().kind {
+                                aws_sdk_dynamodb::error::ScanErrorKind::Unhandled(unhandled) => {
+                                    unhandled
+                                        .source()
+                                        .map(|err| err.to_string())
+                                        .unwrap_or_else(|| err.err().to_string())
+                                }
+                                _ => err.err().to_string(),
+                            }
                         }
                         err => err.to_string(),
                     }),
