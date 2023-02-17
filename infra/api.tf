@@ -67,6 +67,22 @@ module "lambda_function" {
     ADMIN_SECRET     = var.admin_secret
   }
 
+  attach_policy_statements = true
+  policy_statements = [
+    {
+      sid    = "AllowDynamoDB"
+      effect = "Allow"
+
+      actions = [
+        "dynamodb:*",
+      ]
+
+      resources = [
+        module.dynamodb_table.dynamodb_table_arn,
+      ]
+    }
+  ]
+
   tags = local.tags
 }
 

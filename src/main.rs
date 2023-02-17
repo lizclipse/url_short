@@ -49,7 +49,10 @@ impl<'a> Handler<'a> {
             .projection_expression("url")
             .send()
             .await
-            .map_err(|err| (500, err.to_string()))
+            .map_err(|err| {
+                tracing::warn!("Failed to get item: {:#?}", err);
+                (500, err.to_string())
+            })
             .and_then(|res| res.item.ok_or((404, "No redirect was found".to_owned())))
             .and_then(|mut item| {
                 item.remove("url")
