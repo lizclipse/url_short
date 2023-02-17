@@ -77,7 +77,17 @@ impl<'a> Handler<'a> {
 
         let res = match req.send().await {
             Ok(res) => res,
-            Err(err) => return self.render(500, self.render_error(err.to_string())),
+            Err(err) => {
+                return self.render(
+                    500,
+                    self.render_error(match err {
+                        aws_sdk_dynamodb::types::SdkError::ServiceError(err) => {
+                            err.err().to_string()
+                        }
+                        err => err.to_string(),
+                    }),
+                )
+            }
         };
         let cursor = res.last_evaluated_key().and_then(|key| {
             key.get(KEY)
