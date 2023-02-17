@@ -6,6 +6,9 @@ use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
 
 pub type Output = Result<Response<Body>, Error>;
 
+const KEY: &str = "key";
+const URL: &str = "redirect_url";
+
 pub struct Handler<'a> {
     client: &'a Client,
     config: &'a Config,
@@ -45,17 +48,17 @@ impl<'a> Handler<'a> {
         self.client
             .get_item()
             .table_name(&self.config.table_name)
-            .key("key", AttributeValue::S(key.to_owned()))
-            .projection_expression("url")
+            .key(KEY, AttributeValue::S(key.to_owned()))
+            .projection_expression(URL)
             .send()
             .await
             .map_err(|err| {
-                tracing::warn!("Failed to get item: {:#?}", err);
+                tracing::warn!("Failed to get item: {:?}", err);
                 (500, err.to_string())
             })
             .and_then(|res| res.item.ok_or((404, "No redirect was found".to_owned())))
             .and_then(|mut item| {
-                item.remove("url")
+                item.remove(URL)
                     .ok_or((500, "The URL for this redirect does not exist".to_owned()))
             })
             .and_then(|url| match url {

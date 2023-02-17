@@ -3,11 +3,9 @@ use cookie::{Cookie, SameSite};
 use lambda_http::{http::Method, RequestExt};
 use serde::{Deserialize, Serialize};
 
-use crate::{Handler, Output};
+use crate::{Handler, Output, KEY, URL};
 
 const COOKIE_NAME: &str = "admin_secret";
-const KEY: &str = "key";
-const URL: &str = "url";
 const CURSOR: &str = "cursor";
 
 impl<'a> Handler<'a> {
