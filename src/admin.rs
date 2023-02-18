@@ -1,10 +1,11 @@
 use aws_sdk_dynamodb::model::AttributeValue;
+use chrono::Utc;
 use cookie::{Cookie, SameSite};
 use lambda_http::{http::Method, RequestExt};
 use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
-use crate::{Handler, Output, KEY, URL};
+use crate::{Handler, Output, CREATED, KEY, UPDATED, URL};
 
 const COOKIE_NAME: &str = "admin_secret";
 const CURSOR: &str = "cursor";
@@ -35,10 +36,16 @@ impl<'a> Handler<'a> {
     async fn upsert(self, req: UpsertRequest) -> Output {
         let err = self
             .client
-            .put_item()
+            .update_item()
             .table_name(&self.config.table_name)
-            .item(KEY, AttributeValue::S(encode(&req.key).into_owned()))
-            .item(URL, AttributeValue::S(req.url))
+            .key(KEY, AttributeValue::S(encode(&req.key).into_owned()))
+            .update_expression("SET #url = :url, #created = if_not_exists(#created, :created), #updated = :updated, #hits = if_not_exists(#hits, 0)")
+            .expression_attribute_names("#url", URL)
+            .expression_attribute_values(":url", AttributeValue::S(req.url))
+            .expression_attribute_names("#created", CREATED)
+            .expression_attribute_values(":created", AttributeValue::S(format!("{:?}", Utc::now())))
+            .expression_attribute_names("#updated", UPDATED)
+            .expression_attribute_values(":updated", AttributeValue::S(format!("{:?}", Utc::now())))
             .send()
             .await
             .map(|_| None)

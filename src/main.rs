@@ -8,6 +8,8 @@ pub type Output = Result<Response<Body>, Error>;
 
 const KEY: &str = "key";
 const URL: &str = "redirect_url";
+const CREATED: &str = "created";
+const UPDATED: &str = "updated";
 
 pub struct Handler<'a> {
     client: &'a Client,
