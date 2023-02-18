@@ -57,6 +57,10 @@ input {
   width: 100%;
 }
 
+.tight {
+  flex: 0;
+}
+
 p {
   margin: 0;
 }
