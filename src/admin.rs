@@ -5,7 +5,7 @@ use lambda_http::{http::Method, RequestExt};
 use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
-use crate::{Handler, Output, CREATED, KEY, UPDATED, URL, HITS};
+use crate::{Handler, Output, CREATED, HITS, KEY, UPDATED, URL};
 
 const COOKIE_NAME: &str = "admin_secret";
 const CURSOR: &str = "cursor";
