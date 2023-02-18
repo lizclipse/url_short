@@ -2,6 +2,7 @@ use aws_sdk_dynamodb::model::AttributeValue;
 use cookie::{Cookie, SameSite};
 use lambda_http::{http::Method, RequestExt};
 use serde::{Deserialize, Serialize};
+use urlencoding::encode;
 
 use crate::{Handler, Output, KEY, URL};
 
@@ -36,7 +37,7 @@ impl<'a> Handler<'a> {
             .client
             .put_item()
             .table_name(&self.config.table_name)
-            .item(KEY, AttributeValue::S(req.key))
+            .item(KEY, AttributeValue::S(encode(&req.key).into_owned()))
             .item(URL, AttributeValue::S(req.url))
             .send()
             .await
@@ -77,6 +78,7 @@ impl<'a> Handler<'a> {
             Ok(res) => res,
             Err(err) => return self.render(500, self.render_error(format!("{:#?}", err))),
         };
+        let first_nav = !cursor.is_empty();
         let cursor = res.last_evaluated_key().and_then(|key| {
             key.get(KEY)
                 .and_then(|key| match key {
@@ -123,19 +125,34 @@ impl<'a> Handler<'a> {
             format!(
                 include_str!("./templates/admin.html"),
                 error = err.map(|e| self.render_error(e)).unwrap_or_default(),
-                rows = rows,
-                nav = format!(
-                    include_str!("./templates/nav.html"),
-                    key = self.config.admin_key,
-                    next = match cursor {
-                        Some(cursor) => format!(
-                            include_str!("./templates/nav_next.html"),
-                            key = self.config.admin_key,
-                            cursor = cursor
-                        ),
-                        None => "".to_owned(),
-                    }
-                ),
+                rows = if rows.is_empty() {
+                    include_str!("./templates/admin_empty.html")
+                } else {
+                    &rows
+                },
+                nav = if first_nav || cursor.is_some() {
+                    format!(
+                        include_str!("./templates/nav.html"),
+                        first = if first_nav {
+                            format!(
+                                include_str!("./templates/nav_first.html"),
+                                key = self.config.admin_key
+                            )
+                        } else {
+                            "".to_owned()
+                        },
+                        next = match cursor {
+                            Some(cursor) => format!(
+                                include_str!("./templates/nav_next.html"),
+                                key = self.config.admin_key,
+                                cursor = cursor
+                            ),
+                            None => "".to_owned(),
+                        }
+                    )
+                } else {
+                    "".to_owned()
+                },
             ),
         )
     }

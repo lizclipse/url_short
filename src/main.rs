@@ -83,6 +83,7 @@ impl<'a> Handler<'a> {
                 format!(
                     include_str!("./templates/_layout.html"),
                     title = "Url Shortener",
+                    css = format!("<style>{}</style>", include_str!("./templates/_layout.css")),
                     body = body.as_ref()
                 )
                 .into(),
