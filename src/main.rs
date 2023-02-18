@@ -10,6 +10,7 @@ const KEY: &str = "key";
 const URL: &str = "redirect_url";
 const CREATED: &str = "created";
 const UPDATED: &str = "updated";
+const HITS: &str = "hits";
 
 pub struct Handler<'a> {
     client: &'a Client,

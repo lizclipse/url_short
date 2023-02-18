@@ -5,7 +5,7 @@ use lambda_http::{http::Method, RequestExt};
 use serde::{Deserialize, Serialize};
 use urlencoding::encode;
 
-use crate::{Handler, Output, CREATED, KEY, UPDATED, URL};
+use crate::{Handler, Output, CREATED, KEY, UPDATED, URL, HITS};
 
 const COOKIE_NAME: &str = "admin_secret";
 const CURSOR: &str = "cursor";
@@ -39,13 +39,15 @@ impl<'a> Handler<'a> {
             .update_item()
             .table_name(&self.config.table_name)
             .key(KEY, AttributeValue::S(encode(&req.key).into_owned()))
-            .update_expression("SET #url = :url, #created = if_not_exists(#created, :created), #updated = :updated, #hits = if_not_exists(#hits, 0)")
+            .update_expression("SET #url = :url, #created = if_not_exists(#created, :created), #updated = :updated, #hits = if_not_exists(#hits, :hits)")
             .expression_attribute_names("#url", URL)
             .expression_attribute_values(":url", AttributeValue::S(req.url))
             .expression_attribute_names("#created", CREATED)
             .expression_attribute_values(":created", AttributeValue::S(format!("{:?}", Utc::now())))
             .expression_attribute_names("#updated", UPDATED)
             .expression_attribute_values(":updated", AttributeValue::S(format!("{:?}", Utc::now())))
+            .expression_attribute_names("#hits", HITS)
+            .expression_attribute_values(":hits", AttributeValue::N("0".to_owned()))
             .send()
             .await
             .map(|_| None)
