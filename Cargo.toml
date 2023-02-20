@@ -19,6 +19,7 @@ aws-config = "0.53.0"
 aws-sdk-dynamodb = "0.23.0"
 chrono = "0.4.23"
 cookie = { version = "0.17.0", features = ["percent-encode"] }
+futures = "0.3.26"
 http = "0.2.8"
 lambda_http = { version = "0.7", default-features = false, features = [
     "apigw_http",

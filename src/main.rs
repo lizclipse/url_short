@@ -1,8 +1,13 @@
 mod admin;
+mod hit;
 
 use aws_sdk_dynamodb::{model::AttributeValue, Client};
 use cookie::Cookie;
+use futures::join;
+use hit::HitTrackerSender;
 use lambda_http::{run, service_fn, Body, Error, Request, RequestExt, Response};
+
+use crate::hit::hit_tracker;
 
 pub type Output = Result<Response<Body>, Error>;
 
@@ -16,16 +21,23 @@ pub struct Handler<'a> {
     client: &'a Client,
     config: &'a Config,
     event: Request,
+    tracker: HitTrackerSender,
 
     cookies: Vec<String>,
 }
 
 impl<'a> Handler<'a> {
-    pub fn new<'b>(client: &'b Client, config: &'b Config, event: Request) -> Handler<'b> {
+    pub fn new<'b>(
+        client: &'b Client,
+        config: &'b Config,
+        event: Request,
+        tracker: &'b HitTrackerSender,
+    ) -> Handler<'b> {
         Handler {
             client,
             config,
             event,
+            tracker: tracker.clone(),
 
             cookies: vec![],
         }
@@ -47,8 +59,9 @@ impl<'a> Handler<'a> {
         }
     }
 
-    async fn process_redirect(self, key: &str) -> Output {
-        self.client
+    async fn process_redirect(mut self, key: &str) -> Output {
+        match self
+            .client
             .get_item()
             .table_name(&self.config.table_name)
             .key(KEY, AttributeValue::S(key.to_owned()))
@@ -67,9 +80,13 @@ impl<'a> Handler<'a> {
             .and_then(|url| match url {
                 AttributeValue::S(url) => Ok(url),
                 _ => Err((500, "The URL for this redirect is invalid".to_owned())),
-            })
-            .map(redirect_to)
-            .unwrap_or_else(|(status, err)| self.render(status, err))
+            }) {
+            Ok(url) => {
+                self.tracker.track(key.to_owned()).await;
+                redirect_to(url)
+            }
+            Err((status, err)) => self.render(status, self.render_error(err)),
+        }
     }
 
     fn render(&self, status: u16, body: impl AsRef<str>) -> Output {
@@ -151,14 +168,21 @@ async fn main() -> Result<(), Error> {
     let sdk_config = aws_config::load_from_env().await;
     let client = Client::new(&sdk_config);
     let config = Config::new()?;
+    let (hit_tx, mut hit_rx) = hit_tracker(&client, &config);
 
-    run(service_fn(|event| {
-        Handler::new(&client, &config, event).run()
-    }))
-    .await?;
-
-    // TODO: see if this is called consistently upon lambda shutdown
-    tracing::info!("Shutting down");
+    let (res, _) = join!(
+        async {
+            let res = run(service_fn(|event| {
+                Handler::new(&client, &config, event, &hit_tx).run()
+            }))
+            .await;
+            // Close the sender so that the receiver will stop and let the join complete.
+            hit_tx.close();
+            res
+        },
+        hit_rx.run()
+    );
+    res?;
 
     Ok(())
 }
